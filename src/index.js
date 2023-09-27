@@ -1,7 +1,7 @@
 import {
   generateRandomValues,
   seedRandomDataWithPreGeneratedValues,
-} from "./utils.js";
+} from "./utils/utils.js";
 
 const CFG = {
   CANVAS: {
