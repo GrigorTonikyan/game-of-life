@@ -1,11 +1,16 @@
+import {
+  generateRandomValues,
+  seedRandomDataWithPreGeneratedValues,
+} from "./utils.js";
+
 const CFG = {
   CANVAS: {
-    BORDER: '1px solid black',
-    BORDER_R: '16px',
-    BG_C: 'rgb(215 255 255 / 100%)',
+    BORDER: "1px solid black",
+    BORDER_R: "16px",
+    BG_C: "rgb(215 255 255 / 100%)",
   },
   CELL: {
-    ALIVE_COLOR: 'red',
+    ALIVE_COLOR: "red",
     DEAD_COLOR: null,
   },
   GRID: {
@@ -16,16 +21,21 @@ const CFG = {
   },
   WORKERS: {
     COUNT: 6,
-    FPS_WORKER_PATH: './Workers/fpsWorker.js',
-    WORKER_PATH: './Workers/worker.js',
+    FPS_WORKER_PATH: "./Workers/fpsWorker.js",
+    WORKER_PATH: "./Workers/worker.js",
   },
 };
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-const width = Math.floor((window.innerWidth - CFG.GRID.PADDING * 2 - CFG.GRID.CONTROLS_WIDTH) / CFG.GRID.CELL_SIZE);
-const height = Math.floor((window.innerHeight - CFG.GRID.PADDING * 2) / CFG.GRID.CELL_SIZE);
+const width = Math.floor(
+  (window.innerWidth - CFG.GRID.PADDING * 2 - CFG.GRID.CONTROLS_WIDTH) /
+    CFG.GRID.CELL_SIZE
+);
+const height = Math.floor(
+  (window.innerHeight - CFG.GRID.PADDING * 2) / CFG.GRID.CELL_SIZE
+);
 const sectionHeight = Math.ceil(height / CFG.WORKERS.COUNT);
 
 const changedCells = new Set(); // Use a Set to store changed cells
@@ -33,7 +43,7 @@ let prevGrid = createEmptyGrid(width, height);
 let grid = seedRandomDataWithPreGeneratedValues(
   createEmptyGrid(width, height),
   CFG.GRID.LIVE_CELL_PROBABILITY,
-  generateRandomValues(width * height),
+  generateRandomValues(width * height)
 );
 
 initializeCanvas();
@@ -41,20 +51,6 @@ const fpsWorker = initializeFpsWorker();
 const workers = initializeWorkers();
 
 gameLoop();
-
-function generateRandomValues(size) {
-  return Array.from({ length: size }, () => Math.random());
-}
-
-function seedRandomDataWithPreGeneratedValues(grid, probability, randomValues) {
-  let index = 0;
-  for (let x = 0; x < grid.length; x++) {
-    for (let y = 0; y < grid[x].length; y++) {
-      if (randomValues[index++] > probability) grid[x][y] = true;
-    }
-  }
-  return grid;
-}
 
 function createEmptyGrid(width, height) {
   return Array(width)
@@ -66,12 +62,14 @@ function initializeCanvas() {
   const { CELL_SIZE, PADDING, CONTROLS_WIDTH } = CFG.GRID;
   const { BORDER, BORDER_R, BG_C } = CFG.CANVAS;
 
-  const width = Math.floor((window.innerWidth - PADDING * 2 - CONTROLS_WIDTH) / CELL_SIZE);
+  const width = Math.floor(
+    (window.innerWidth - PADDING * 2 - CONTROLS_WIDTH) / CELL_SIZE
+  );
   const height = Math.floor((window.innerHeight - PADDING * 2) / CELL_SIZE);
 
   canvas.width = width * CELL_SIZE;
   canvas.height = height * CELL_SIZE;
-  canvas.style.position = 'absolute';
+  canvas.style.position = "absolute";
   canvas.style.left = `${PADDING}px`;
   canvas.style.top = `${PADDING}px`;
   canvas.style.border = BORDER;
@@ -84,7 +82,7 @@ function initializeFpsWorker() {
 
   const worker = new Worker(FPS_WORKER_PATH);
   worker.onmessage = (e) => {
-    document.getElementById('fps').innerText = e.data;
+    document.getElementById("fps").innerText = e.data;
   };
   return worker;
 }
@@ -122,12 +120,12 @@ function draw() {
   }
 
   changedCells.forEach((cell) => {
-    const [x, y] = cell.split(',').map(Number);
+    const [x, y] = cell.split(",").map(Number);
     if (grid[x][y]) {
-      ctx.fillStyle = 'purple';
+      ctx.fillStyle = "purple";
       ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
     } else {
-      ctx.fillStyle = 'rgba(255,255,255, 0.7)';
+      ctx.fillStyle = "rgba(255,255,255, 0.7)";
       ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
     }
   });
@@ -154,7 +152,10 @@ async function update() {
 
   const promises = workers.map((worker, i) => {
     const yStart = i * sectionHeight - (i > 0 ? 1 : 0);
-    const yEnd = Math.min(yStart + sectionHeight + (i < workerCount - 1 ? 1 : 0), height);
+    const yEnd = Math.min(
+      yStart + sectionHeight + (i < workerCount - 1 ? 1 : 0),
+      height
+    );
     const section = grid.map((col) => col.slice(yStart, yEnd));
     return new Promise((resolve) => {
       resolveFunctions.push(resolve);
@@ -169,7 +170,7 @@ async function update() {
 }
 
 async function gameLoop() {
-  fpsWorker.postMessage('tick');
+  fpsWorker.postMessage("tick");
 
   update();
   draw();
