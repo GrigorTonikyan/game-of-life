@@ -20,7 +20,7 @@ const CFG = {
     CONTROLS_WIDTH: 100,
   },
   WORKERS: {
-    COUNT: 6,
+    COUNT: 4,
     FPS_WORKER_PATH: "./Workers/fpsWorker.js",
     WORKER_PATH: "./Workers/worker.js",
   },
