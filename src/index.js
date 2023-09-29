@@ -15,11 +15,15 @@ const changedCells = get2DArraysChanges(gridX, gridY, previousGrid, currentGrid)
 function initializeFpsWorker() {
   const { FPS_WORKER_PATH } = CFG.WORKERS;
 
-  const worker = new Worker(FPS_WORKER_PATH);
-  worker.onmessage = (e) => {
-    document.getElementById('fps').innerText = e.data;
-  };
-  return worker;
+  try {
+    const worker = new Worker(FPS_WORKER_PATH);
+    worker.onmessage = (e) => {
+      document.getElementById('fps').innerText = e.data;
+    };
+    return worker;
+  } catch (error) {
+    console.error('Failed to create FPS worker:', error);
+  }
 }
 
 let resolveCounter = 0;
@@ -36,53 +40,47 @@ function handleWorkerMessage(workerIndex) {
     }
   };
 }
+
 function initializeWorkers() {
   const { COUNT, WORKER_PATH } = CFG.WORKERS;
 
-  return Array.from({ length: COUNT }, (_, i) => {
-    const worker = new Worker(WORKER_PATH);
-    worker.onmessage = (e) => {
-      handleWorkerMessage(i)(e);
-      resolveCounter++;
-      if (resolveCounter === COUNT) {
-        resolveFunctions.forEach((fn) => fn());
-        resolveCounter = 0;
-        resolveFunctions = [];
-      }
-    };
-    return worker;
-  });
-}
-
-async function update() {
-  const workerCount = CFG.WORKERS.COUNT;
-
-  const promises = workers.map((worker, i) => {
-    const yStart = i * sectionHeight - (i > 0 ? 1 : 0);
-    const yEnd = Math.min(yStart + sectionHeight + (i < workerCount - 1 ? 1 : 0), gridY);
-    const section = currentGrid.map((col) => col.slice(yStart, yEnd));
-    return new Promise((resolve) => {
-      resolveFunctions.push(resolve);
-      worker.postMessage({
-        grid: section,
-        width: gridX,
-        height: yEnd - yStart,
+  const workerPromises = Array.from({ length: COUNT }, (_, i) => {
+    try {
+      const worker = new Worker(WORKER_PATH);
+      return new Promise((resolve) => {
+        worker.onmessage = (e) => {
+          handleWorkerMessage(i)(e);
+          resolveCounter++;
+          if (resolveCounter === COUNT) {
+            resolveFunctions.forEach((fn) => fn());
+            // reset counters after resolving all promises
+            resolveCounter = 0;
+            resolveFunctions = [];
+          }
+        };
       });
-    });
+    } catch (error) {
+      console.error('Failed to create worker:', error);
+    }
   });
-  await Promise.all(promises);
+
+  return { workers: workerPromises.map((promise) => promise.worker), workerPromises };
 }
 
-async function gameLoop() {
+async function update(workerPromises) {
+  await Promise.all(workerPromises);
+}
+
+async function gameLoop(workerPromises) {
   fpsWorker.postMessage('tick');
 
   previousGrid = draw(changedCells, currentGrid);
-  update();
+  await update(workerPromises);
 
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(() => gameLoop(workerPromises));
 }
 
 const fpsWorker = initializeFpsWorker();
 initializeCanvas();
-const workers = initializeWorkers();
-requestAnimationFrame(gameLoop);
+const { workers, workerPromises } = initializeWorkers();
+requestAnimationFrame(() => gameLoop(workerPromises));
