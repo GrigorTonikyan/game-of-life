@@ -9,8 +9,8 @@ const CFG = {
     DEAD_COLOR: null,
   },
   GRID: {
-    CELL_SIZE: 3,
-    LIVE_CELL_PROBABILITY: 0.53,
+    CELL_SIZE: 2,
+    LIVE_CELL_PROBABILITY: 0.73,
     PADDING: 16,
     CONTROLS_WIDTH: 100,
   },
