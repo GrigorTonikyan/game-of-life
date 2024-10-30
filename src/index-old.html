@@ -1,5 +1,4 @@
-<!-- index.html -->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -8,28 +7,20 @@
     <style>
       body {
         margin: 0;
-      }
-      #controls {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 10;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
       }
       #fps {
         position: absolute;
         top: 10px;
         right: 10px;
-        font-size: 18px;
-        color: #333;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 5px;
+        color: white;
       }
     </style>
   </head>
-  <body>
-    <div id="controls">
-      <label>Width: <input type="number" id="gridWidth" value="100" /></label>
-      <label>Height: <input type="number" id="gridHeight" value="100" /></label>
-      <button id="startButton">Start</button>
-    </div>
+  <body id="root">
     <canvas id="gameCanvas"></canvas>
     <div id="fps">FPS: 0</div>
     <script src="index.js"></script>

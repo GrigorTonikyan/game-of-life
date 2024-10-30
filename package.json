@@ -10,9 +10,6 @@
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^4.15.1"
   },
-  "dependencies": {
-    "node": "^20.0.0"
-  },
   "scripts": {
     "build": "webpack --mode production",
     "start": "webpack-dev-server --mode development",

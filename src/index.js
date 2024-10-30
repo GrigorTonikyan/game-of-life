@@ -1,178 +1,119 @@
-const CFG = {
-  CANVAS: {
-    BORDER: '1px solid black',
-    BORDER_R: '16px',
-    BG_C: 'rgb(215 255 255 / 100%)',
-  },
-  CELL: {
-    ALIVE_COLOR: 'red',
-    DEAD_COLOR: null,
-  },
-  GRID: {
-    CELL_SIZE: 2,
-    LIVE_CELL_PROBABILITY: 0.73,
-    PADDING: 16,
-    CONTROLS_WIDTH: 100,
-  },
-  WORKERS: {
-    COUNT: 6,
-    FPS_WORKER_PATH: './Workers/fpsWorker.js',
-    WORKER_PATH: './Workers/worker.js',
-  },
-};
+// script.js
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+// Configuration Constants (Moved to Backend)
+// const CFG = { ... } // Removed from frontend
 
-const width = Math.floor((window.innerWidth - CFG.GRID.PADDING * 2 - CFG.GRID.CONTROLS_WIDTH) / CFG.GRID.CELL_SIZE);
-const height = Math.floor((window.innerHeight - CFG.GRID.PADDING * 2) / CFG.GRID.CELL_SIZE);
-const sectionHeight = Math.ceil(height / CFG.WORKERS.COUNT);
+// Canvas Initialization
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-const changedCells = new Set(); // Use a Set to store changed cells
-let prevGrid = createEmptyGrid(width, height);
-let grid = seedRandomDataWithPreGeneratedValues(
-  createEmptyGrid(width, height),
-  CFG.GRID.LIVE_CELL_PROBABILITY,
-  generateRandomValues(width * height),
-);
+// Initialize Grids
+let grid = [];
+let prevGrid = [];
+let width = 0;
+let height = 0;
+let cellSize = 16; // Default value, will be updated from backend
 
-initializeCanvas();
-const fpsWorker = initializeFpsWorker();
-const workers = initializeWorkers();
+// Initialize WebSocket (Will be connected after settings are loaded)
+let socket;
 
-gameLoop();
+// Event Listener for Start Button
+document.getElementById("startButton").addEventListener("click", () => {
+  width = parseInt(document.getElementById("gridWidth").value);
+  height = parseInt(document.getElementById("gridHeight").value);
+  initializeWebSocket();
+});
 
-function generateRandomValues(size) {
-  return Array.from({ length: size }, () => Math.random());
-}
+// Function to Initialize WebSocket and Start the Game
+function initializeWebSocket() {
+  socket = new WebSocket("ws://localhost:8080"); // Adjust the port as needed
 
-function seedRandomDataWithPreGeneratedValues(grid, probability, randomValues) {
-  let index = 0;
-  for (let x = 0; x < grid.length; x++) {
-    for (let y = 0; y < grid[x].length; y++) {
-      if (randomValues[index++] > probability) grid[x][y] = true;
+  socket.addEventListener("open", function (event) {
+    console.log("WebSocket connection established.");
+    // Request settings and initial grid from backend
+    socket.send(
+      JSON.stringify({
+        action: "initialize",
+        width: width,
+        height: height,
+      })
+    );
+  });
+
+  socket.addEventListener("message", function (event) {
+    const data = JSON.parse(event.data);
+
+    if (data.action === "initialize") {
+      // Receive settings and initial grid from backend
+      cellSize = data.cellSize;
+      grid = data.grid;
+      prevGrid = createEmptyGrid(width, height);
+      initializeCanvas();
+      gameLoop();
+    } else if (data.action === "update") {
+      grid = data.grid;
+      draw();
     }
-  }
-  return grid;
-}
+  });
 
-function createEmptyGrid(width, height) {
-  return Array(width)
-    .fill(null)
-    .map(() => Array(height).fill(false));
-}
-
-function initializeCanvas() {
-  const { CELL_SIZE, PADDING, CONTROLS_WIDTH } = CFG.GRID;
-  const { BORDER, BORDER_R, BG_C } = CFG.CANVAS;
-
-  const width = Math.floor((window.innerWidth - PADDING * 2 - CONTROLS_WIDTH) / CELL_SIZE);
-  const height = Math.floor((window.innerHeight - PADDING * 2) / CELL_SIZE);
-
-  canvas.width = width * CELL_SIZE;
-  canvas.height = height * CELL_SIZE;
-  canvas.style.position = 'absolute';
-  canvas.style.left = `${PADDING}px`;
-  canvas.style.top = `${PADDING}px`;
-  canvas.style.border = BORDER;
-  canvas.style.borderRadius = BORDER_R;
-  canvas.style.backgroundColor = BG_C;
-}
-
-function initializeFpsWorker() {
-  const { FPS_WORKER_PATH } = CFG.WORKERS;
-
-  const worker = new Worker(FPS_WORKER_PATH);
-  worker.onmessage = (e) => {
-    document.getElementById('fps').innerText = e.data;
-  };
-  return worker;
-}
-
-let resolveCounter = 0;
-let resolveFunctions = [];
-
-function initializeWorkers() {
-  const { COUNT, WORKER_PATH } = CFG.WORKERS;
-
-  return Array.from({ length: COUNT }, (_, i) => {
-    const worker = new Worker(WORKER_PATH);
-    worker.onmessage = (e) => {
-      handleWorkerMessage(i)(e);
-      resolveCounter++;
-      if (resolveCounter === COUNT) {
-        resolveFunctions.forEach((fn) => fn());
-        resolveCounter = 0;
-        resolveFunctions = [];
-      }
-    };
-    return worker;
+  socket.addEventListener("close", function (event) {
+    console.log("WebSocket connection closed.");
   });
 }
 
+// Function to Create Empty Grid
+function createEmptyGrid(width, height) {
+  return Array.from({ length: width }, () =>
+    Array.from({ length: height }, () => false)
+  );
+}
+
+// Function to Initialize Canvas
+function initializeCanvas() {
+  const PADDING = 16; // You can also get this from backend if needed
+
+  const canvasWidth = width * cellSize;
+  const canvasHeight = height * cellSize;
+
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+  canvas.style.position = "absolute";
+  canvas.style.left = `${PADDING}px`;
+  canvas.style.top = `${PADDING}px`;
+  canvas.style.border = "1px solid black";
+  canvas.style.borderRadius = "16px";
+  canvas.style.backgroundColor = "rgb(215 255 255 / 100%)";
+}
+
+// Function to Draw Grid on Canvas
 function draw() {
-  const { CELL_SIZE } = CFG.GRID;
+  const ALIVE_COLOR = "purple";
+  const DEAD_COLOR = "rgba(255,255,255, 0.7)";
 
   for (let x = 0; x < width; x++) {
     for (let y = 0; y < height; y++) {
       if (grid[x][y] !== prevGrid[x][y]) {
-        changedCells.add(`${x},${y}`);
+        ctx.fillStyle = grid[x][y] ? ALIVE_COLOR : DEAD_COLOR;
+        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
       }
     }
   }
 
-  changedCells.forEach((cell) => {
-    const [x, y] = cell.split(',').map(Number);
-    if (grid[x][y]) {
-      ctx.fillStyle = 'purple';
-      ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    } else {
-      ctx.fillStyle = 'rgba(255,255,255, 0.7)';
-      ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    }
-  });
-  changedCells.clear();
-
+  // Update prevGrid
   prevGrid = grid.map((row) => row.slice());
 }
 
-function handleWorkerMessage(workerIndex) {
-  return (e) => {
-    const newSection = e.data;
-    const yStart = workerIndex * sectionHeight;
-    const yEnd = Math.min(yStart + sectionHeight, height);
-    for (let x = 0; x < width; x++) {
-      for (let y = yStart, j = workerIndex > 0 ? 1 : 0; y < yEnd; y++, j++) {
-        grid[x][y] = newSection[x][j];
-      }
-    }
-  };
+// Function to Update Grid by Sending Data to Backend
+function update() {
+  if (socket.readyState === WebSocket.OPEN) {
+    // Only send minimal data (e.g., user actions), but in this case, we don't have any
+    socket.send(JSON.stringify({ action: "update" }));
+  }
 }
 
-async function update() {
-  const workerCount = CFG.WORKERS.COUNT;
-
-  const promises = workers.map((worker, i) => {
-    const yStart = i * sectionHeight - (i > 0 ? 1 : 0);
-    const yEnd = Math.min(yStart + sectionHeight + (i < workerCount - 1 ? 1 : 0), height);
-    const section = grid.map((col) => col.slice(yStart, yEnd));
-    return new Promise((resolve) => {
-      resolveFunctions.push(resolve);
-      worker.postMessage({
-        grid: section,
-        width: width,
-        height: yEnd - yStart,
-      });
-    });
-  });
-  await Promise.all(promises);
-}
-
-async function gameLoop() {
-  fpsWorker.postMessage('tick');
-
+// Main Game Loop
+function gameLoop() {
   update();
-  draw();
-
+  // Draw is called when data is received from the server
   requestAnimationFrame(gameLoop);
 }
