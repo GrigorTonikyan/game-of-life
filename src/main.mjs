@@ -1,7 +1,5 @@
-// script.js
-
-// Configuration Constants (Moved to Backend)
-// const CFG = { ... } // Removed from frontend
+import "./assets/styles/_index.css";
+import { config } from "./constants";
 
 // Canvas Initialization
 const canvas = document.getElementById("gameCanvas");
@@ -24,9 +22,8 @@ document.getElementById("startButton").addEventListener("click", () => {
   initializeWebSocket();
 });
 
-// Function to Initialize WebSocket and Start the Game
 function initializeWebSocket() {
-  socket = new WebSocket("ws://localhost:8080"); // Adjust the port as needed
+  socket = new WebSocket(`${config.server.url}:${config.server.port}`);
 
   socket.addEventListener("open", function (event) {
     console.log("WebSocket connection established.");
@@ -87,33 +84,29 @@ function initializeCanvas() {
 
 // Function to Draw Grid on Canvas
 function draw() {
-  const ALIVE_COLOR = "purple";
-  const DEAD_COLOR = "rgba(255,255,255, 0.7)";
-
   for (let x = 0; x < width; x++) {
     for (let y = 0; y < height; y++) {
       if (grid[x][y] !== prevGrid[x][y]) {
-        ctx.fillStyle = grid[x][y] ? ALIVE_COLOR : DEAD_COLOR;
+        ctx.fillStyle = grid[x][y]
+          ? config.ui.colors.cell.alive
+          : config.ui.colors.cell.dead;
         ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
       }
     }
   }
 
-  // Update prevGrid
-  prevGrid = grid.map((row) => row.slice());
+  prevGrid = grid.map((row) => row.slice()); /* update previous grid */
 }
 
 // Function to Update Grid by Sending Data to Backend
 function update() {
-  if (socket.readyState === WebSocket.OPEN) {
-    // Only send minimal data (e.g., user actions), but in this case, we don't have any
-    socket.send(JSON.stringify({ action: "update" }));
-  }
+  if (!socket.readyState === WebSocket.OPEN) return;
+  // Only send minimal data (e.g., user actions), but in this case, we don't have any
+  socket.send(JSON.stringify({ action: "update" }));
 }
 
-// Main Game Loop
 function gameLoop() {
   update();
-  // Draw is called when data is received from the server
+  /* Draw is called when data is received from the server */
   requestAnimationFrame(gameLoop);
 }

@@ -1,9 +1,10 @@
 # game_server.py
 
 import asyncio
-import websockets
 import json
 import random
+
+import websockets
 
 # Configuration Constants
 CFG = {
@@ -100,6 +101,12 @@ start_server = websockets.serve(
     compression=None,  # Optional: Disable compression
 )
 
-asyncio.get_event_loop().run_until_complete(start_server)
-print("Python WebSocket server is running on ws://localhost:8080")
-asyncio.get_event_loop().run_forever()
+
+def main():
+    asyncio.get_event_loop().run_until_complete(start_server)
+    print("Python WebSocket server is running on ws://localhost:8080")
+    asyncio.get_event_loop().run_forever()
+
+
+if __name__ == "__main__":
+    asyncio.run(start_server)

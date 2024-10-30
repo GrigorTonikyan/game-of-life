@@ -6,13 +6,11 @@
   "author": "Greg",
   "main": "index.mjs",
   "devDependencies": {
-    "webpack": "^5.88.2",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1"
+    "vite": "^5.4.10"
   },
   "scripts": {
-    "build": "webpack --mode production",
-    "start": "webpack-dev-server --mode development",
-    "test": "echo \"Error: no test specified\" && exit 0"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   }
 }
